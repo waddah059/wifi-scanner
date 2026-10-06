@@ -1,0 +1,5 @@
+Flask
+python-nmap
+scapy
+netifaces2
+psutil

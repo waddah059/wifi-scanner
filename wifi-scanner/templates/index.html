@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Device Scanner</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .network-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .info-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .info-card h3 {
+            color: #555;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+        
+        .info-card p {
+            color: #333;
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+        }
+        
+        .btn-secondary {
+            background: #48bb78;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #38a169;
+            transform: translateY(-2px);
+        }
+        
+        .scanning {
+            background: #ed8936 !important;
+        }
+        
+        .devices-container {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .devices-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .devices-count {
+            background: #667eea;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+        
+        .last-scan {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        th {
+            background: #f8f9fa;
+            padding: 15px;
+            text-align: left;
+            color: #555;
+            font-weight: 600;
+            border-bottom: 2px solid #e9ecef;
+        }
+        
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #e9ecef;
+            color: #333;
+        }
+        
+        tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .device-status {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-up {
+            background: #48bb78;
+        }
+        
+        .mac-address {
+            font-family: monospace;
+            background: #f1f3f4;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        
+        .error {
+            background: #fed7d7;
+            color: #c53030;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .header, .devices-container {
+                padding: 20px;
+            }
+            
+            table {
+                display: block;
+                overflow-x: auto;
+            }
+            
+            .controls {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌐 Network Device Scanner</h1>
+            <p>Monitor devices connected to your WiFi network</p>
+            
+            <div class="network-info" id="networkInfo">
+                <!-- Network info will be loaded here -->
+            </div>
+            
+            <div class="controls">
+                <button class="btn btn-primary" onclick="scanDevices()" id="scanBtn">
+                    🔍 Scan Network
+                </button>
+                <button class="btn btn-secondary" onclick="scanWithARP()">
+                    ⚡ Fast ARP Scan
+                </button>
+                <button class="btn" onclick="autoRefreshToggle()" id="autoRefreshBtn">
+                    🔄 Enable Auto-Refresh (60s)
+                </button>
+                <select id="refreshInterval" onchange="updateRefreshInterval()" style="padding: 12px; border-radius: 6px; border: 1px solid #ddd;">
+                    <option value="30">30 seconds</option>
+                    <option value="60" selected>60 seconds</option>
+                    <option value="120">2 minutes</option>
+                    <option value="300">5 minutes</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="devices-container">
+            <div class="devices-header">
+                <h2>Connected Devices</h2>
+                <div class="devices-count">
+                    <span id="deviceCount">0</span> devices found
+                </div>
+            </div>
+            
+            <div class="last-scan" id="lastScan">
+                Last scan: Never
+            </div>
+            
+            <div id="loading" class="loading">
+                Loading devices...
+            </div>
+            
+            <div id="error" class="error" style="display: none;"></div>
+            
+            <div id="devicesTable" style="display: none;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Status</th>
+                            <th>Device Name</th>
+                            <th>IP Address</th>
+                            <th>MAC Address</th>
+                            <th>Vendor</th>
+                        </tr>
+                    </thead>
+                    <tbody id="devicesBody">
+                        <!-- Devices will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let autoRefresh = false;
+        let refreshInterval = 60000; // 60 seconds
+        let autoRefreshTimer = null;
+        
+        // Load network info on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadNetworkInfo();
+            loadDevices();
+            
+            // Check scan status periodically
+            setInterval(checkScanStatus, 2000);
+        });
+        
+        function loadNetworkInfo() {
+            fetch('/api/network-info')
+                .then(response => response.json())
+                .then(data => {
+                    const networkInfoDiv = document.getElementById('networkInfo');
+                    networkInfoDiv.innerHTML = `
+                        <div class="info-card">
+                            <h3>Your IP Address</h3>
+                            <p>${data.ip || 'Unknown'}</p>
+                        </div>
+                        <div class="info-card">
+                            <h3>Network Interface</h3>
+                            <p>${data.interface || 'Unknown'}</p>
+                        </div>
+                        <div class="info-card">
+                            <h3>Network Range</h3>
+                            <p>${data.network || 'Unknown'}</p>
+                        </div>
+                        <div class="info-card">
+                            <h3>Subnet Mask</h3>
+                            <p>${data.netmask || 'Unknown'}</p>
+                        </div>
+                    `;
+                })
+                .catch(error => {
+                    console.error('Error loading network info:', error);
+                });
+        }
+        
+        function loadDevices() {
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('devicesTable').style.display = 'none';
+            document.getElementById('error').style.display = 'none';
+            
+            fetch('/api/devices')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('loading').style.display = 'none';
+                    
+                    if (data.success) {
+                        updateDevicesTable(data.devices);
+                        document.getElementById('deviceCount').textContent = data.count;
+                        
+                        if (data.last_scan) {
+                            document.getElementById('lastScan').textContent = 
+                                `Last scan: ${data.last_scan}`;
+                        }
+                        
+                        if (data.scan_in_progress) {
+                            document.getElementById('scanBtn').classList.add('scanning');
+                            document.getElementById('scanBtn').innerHTML = '⏳ Scanning...';
+                        } else {
+                            document.getElementById('scanBtn').classList.remove('scanning');
+                            document.getElementById('scanBtn').innerHTML = '🔍 Scan Network';
+                        }
+                    } else {
+                        showError(data.error || 'Failed to load devices');
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('loading').style.display = 'none';
+                    showError('Network error: ' + error.message);
+                });
+        }
+        
+        function updateDevicesTable(devices) {
+            const devicesBody = document.getElementById('devicesBody');
+            
+            if (devices.length === 0) {
+                devicesBody.innerHTML = `
+                    <tr>
+                        <td colspan="5" style="text-align: center; padding: 40px; color: #666;">
+                            No devices found. Try scanning your network.
+                        </td>
+                    </tr>
+                `;
+                document.getElementById('devicesTable').style.display = 'block';
+                return;
+            }
+            
+            devicesBody.innerHTML = devices.map(device => `
+                <tr>
+                    <td>
+                        <span class="device-status status-up"></span>
+                        ${device.status || 'up'}
+                    </td>
+                    <td>
+                        <strong>${device.hostname || 'Unknown Device'}</strong>
+                    </td>
+                    <td>${device.ip}</td>
+                    <td>
+                        <span class="mac-address">${device.mac || 'Unknown'}</span>
+                    </td>
+                    <td>${device.vendor || 'Unknown'}</td>
+                </tr>
+            `).join('');
+            
+            document.getElementById('devicesTable').style.display = 'block';
+        }
+        
+        function scanDevices() {
+            const btn = document.getElementById('scanBtn');
+            if (btn.classList.contains('scanning')) {
+                return; // Don't allow multiple scans
+            }
+            
+            btn.classList.add('scanning');
+            btn.innerHTML = '⏳ Scanning...';
+            
+            fetch('/api/scan', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ method: 'nmap' })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Wait a bit then refresh
+                    setTimeout(loadDevices, 3000);
+                } else {
+                    btn.classList.remove('scanning');
+                    btn.innerHTML = '🔍 Scan Network';
+                    showError(data.message || 'Scan failed');
+                }
+            })
+            .catch(error => {
+                btn.classList.remove('scanning');
+                btn.innerHTML = '🔍 Scan Network';
+                showError('Scan failed: ' + error.message);
+            });
+        }
+        
+        function scanWithARP() {
+            const btn = document.getElementById('scanBtn');
+            btn.classList.add('scanning');
+            btn.innerHTML = '⚡ Fast ARP Scan...';
+            
+            fetch('/api/scan', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ method: 'arp' })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // ARP scan is faster, refresh sooner
+                    setTimeout(loadDevices, 1000);
+                } else {
+                    btn.classList.remove('scanning');
+                    btn.innerHTML = '🔍 Scan Network';
+                    showError(data.message || 'ARP scan failed');
+                }
+            })
+            .catch(error => {
+                btn.classList.remove('scanning');
+                btn.innerHTML = '🔍 Scan Network';
+                showError('ARP scan failed: ' + error.message);
+            });
+        }
+        
+        function checkScanStatus() {
+            fetch('/api/devices')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.scan_in_progress) {
+                        document.getElementById('scanBtn').classList.add('scanning');
+                        document.getElementById('scanBtn').innerHTML = '⏳ Scanning...';
+                    } else {
+                        document.getElementById('scanBtn').classList.remove('scanning');
+                        document.getElementById('scanBtn').innerHTML = '🔍 Scan Network';
+                    }
+                });
+        }
+        
+        function autoRefreshToggle() {
+            const btn = document.getElementById('autoRefreshBtn');
+            autoRefresh = !autoRefresh;
+            
+            if (autoRefresh) {
+                btn.innerHTML = '⏸️ Disable Auto-Refresh';
+                startAutoRefresh();
+            } else {
+                btn.innerHTML = '🔄 Enable Auto-Refresh';
+                stopAutoRefresh();
+            }
+        }
+        
+        function startAutoRefresh() {
+            if (autoRefreshTimer) {
+                clearInterval(autoRefreshTimer);
+            }
+            autoRefreshTimer = setInterval(loadDevices, refreshInterval);
+        }
+        
+        function stopAutoRefresh() {
+            if (autoRefreshTimer) {
+                clearInterval(autoRefreshTimer);
+                autoRefreshTimer = null;
+            }
+        }
+        
+        function updateRefreshInterval() {
+            const select = document.getElementById('refreshInterval');
+            refreshInterval = parseInt(select.value) * 1000;
+            
+            if (autoRefresh) {
+                startAutoRefresh();
+            }
+        }
+        
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
